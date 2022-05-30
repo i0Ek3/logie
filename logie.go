@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+    "log"
 	"runtime"
 	"strconv"
 	"strings"
@@ -424,3 +425,26 @@ func (l *Level) UnmarshalText(text []byte) error {
 	}
 	return nil
 }
+
+/*
+func main() {
+	Info("std log")
+	SetOptions(WithLevel(DebugLevel))
+	Debug("change std log to debug level")
+	SetOptions(WithFormatter(&JSONFormatter{IgnoreBasicFields: false}))
+	Debug("log in json format")
+	Info("another log in json format")
+
+	fd, err := os.OpenFile("test.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalln("create file test.log failed")
+	}
+	defer fd.Close()
+
+	l := New(WithLevel(InfoLevel),
+		WithPosition(fd),
+		WithFormatter(&JSONFormatter{IgnoreBasicFields: false}),
+	)
+	l.Info("custom log with json formatter")
+}
+*/
