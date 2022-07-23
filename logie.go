@@ -1,12 +1,12 @@
-package logie
+package main
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
-    "log"
 	"runtime"
 	"strconv"
 	"strings"
@@ -24,10 +24,8 @@ const (
 )
 
 type (
-	//
 	Level uint8
 
-	//
 	Option func(*options)
 )
 
@@ -49,6 +47,18 @@ var LevelMapping = map[Level]string{
 	ErrorLevel: "Error",
 	PanicLevel: "Panic",
 	FatalLevel: "Fatal",
+}
+
+type Formatter interface {
+	Format(entry *Entry) error
+}
+
+type options struct {
+	position     io.Writer
+	level        Level
+	stdLevel     Level
+	formatter    Formatter
+	enableCaller bool
 }
 
 type Logger struct {
@@ -98,107 +108,107 @@ func (l *Logger) entry() *Entry {
 	return l.entryPool.Get().(*Entry)
 }
 
-func (l *Logger) Debug(args ...interface{}) {
+func (l *Logger) Debug(args ...any) {
 	l.entry().write(DebugLevel, FmtEmptySeparate, args...)
 }
 
-func (l *Logger) Info(args ...interface{}) {
+func (l *Logger) Info(args ...any) {
 	l.entry().write(InfoLevel, FmtEmptySeparate, args...)
 }
 
-func (l *Logger) Warn(args ...interface{}) {
+func (l *Logger) Warn(args ...any) {
 	l.entry().write(WarnLevel, FmtEmptySeparate, args...)
 }
 
-func (l *Logger) Error(args ...interface{}) {
+func (l *Logger) Error(args ...any) {
 	l.entry().write(ErrorLevel, FmtEmptySeparate, args...)
 }
 
-func (l *Logger) Panic(args ...interface{}) {
+func (l *Logger) Panic(args ...any) {
 	l.entry().write(PanicLevel, FmtEmptySeparate, args...)
 	panic(fmt.Sprint(args...))
 }
 
-func (l *Logger) Fatal(args ...interface{}) {
+func (l *Logger) Fatal(args ...any) {
 	l.entry().write(FatalLevel, FmtEmptySeparate, args...)
 	os.Exit(1)
 }
 
-func (l *Logger) Debugf(format string, args ...interface{}) {
+func (l *Logger) Debugf(format string, args ...any) {
 	l.entry().write(DebugLevel, format, args...)
 }
 
-func (l *Logger) Infof(format string, args ...interface{}) {
+func (l *Logger) Infof(format string, args ...any) {
 	l.entry().write(InfoLevel, format, args...)
 }
 
-func (l *Logger) Warnf(format string, args ...interface{}) {
+func (l *Logger) Warnf(format string, args ...any) {
 	l.entry().write(WarnLevel, format, args...)
 }
 
-func (l *Logger) Errorf(format string, args ...interface{}) {
+func (l *Logger) Errorf(format string, args ...any) {
 	l.entry().write(ErrorLevel, format, args...)
 }
 
-func (l *Logger) Panicf(format string, args ...interface{}) {
+func (l *Logger) Panicf(format string, args ...any) {
 	l.entry().write(PanicLevel, format, args...)
 	panic(fmt.Sprintf(format, args...))
 }
 
-func (l *Logger) Fatalf(format string, args ...interface{}) {
+func (l *Logger) Fatalf(format string, args ...any) {
 	l.entry().write(FatalLevel, format, args...)
 	os.Exit(1)
 }
 
 // std logger
-func Debug(args ...interface{}) {
+func Debug(args ...any) {
 	std.entry().write(DebugLevel, FmtEmptySeparate, args...)
 }
 
-func Info(args ...interface{}) {
+func Info(args ...any) {
 	std.entry().write(InfoLevel, FmtEmptySeparate, args...)
 }
 
-func Warn(args ...interface{}) {
+func Warn(args ...any) {
 	std.entry().write(WarnLevel, FmtEmptySeparate, args...)
 }
 
-func Error(args ...interface{}) {
+func Error(args ...any) {
 	std.entry().write(ErrorLevel, FmtEmptySeparate, args...)
 }
 
-func Panic(args ...interface{}) {
+func Panic(args ...any) {
 	std.entry().write(PanicLevel, FmtEmptySeparate, args...)
 	panic(fmt.Sprint(args...))
 }
 
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	std.entry().write(FatalLevel, FmtEmptySeparate, args...)
 	os.Exit(1)
 }
 
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	std.entry().write(DebugLevel, format, args...)
 }
 
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	std.entry().write(InfoLevel, format, args...)
 }
 
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	std.entry().write(WarnLevel, format, args...)
 }
 
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	std.entry().write(ErrorLevel, format, args...)
 }
 
-func Panicf(format string, args ...interface{}) {
+func Panicf(format string, args ...any) {
 	std.entry().write(PanicLevel, format, args...)
 	panic(fmt.Sprintf(format, args...))
 }
 
-func Fatalf(format string, args ...interface{}) {
+func Fatalf(format string, args ...any) {
 	std.entry().write(FatalLevel, format, args...)
 	os.Exit(1)
 }
@@ -206,25 +216,25 @@ func Fatalf(format string, args ...interface{}) {
 type Entry struct {
 	logger *Logger
 	Buf    *bytes.Buffer
-	Map    map[string]interface{}
+	Map    map[string]any
 	Level  Level
 	Time   time.Time
 	File   string
 	Line   int
 	Func   string
 	Format string
-	Args   []interface{}
+	Args   []any
 }
 
 func entry(logger *Logger) *Entry {
 	return &Entry{
 		logger: logger,
 		Buf:    new(bytes.Buffer),
-		Map:    make(map[string]interface{}, 5),
+		Map:    make(map[string]any, 5),
 	}
 }
 
-func (e *Entry) write(lvl Level, format string, args ...interface{}) {
+func (e *Entry) write(lvl Level, format string, args ...any) {
 	if e.logger.opt.level > lvl {
 		return
 	}
@@ -263,10 +273,6 @@ func (e *Entry) release() {
 	e.Args, e.Line, e.File, e.Format, e.Func = nil, 0, "", "", ""
 	e.Buf.Reset()
 	e.logger.entryPool.Put(e)
-}
-
-type Formatter interface {
-	Format(entry *Entry) error
 }
 
 type TextFormatter struct {
@@ -335,14 +341,6 @@ func (f *JSONFormatter) Format(e *Entry) error {
 	}
 
 	return nil
-}
-
-type options struct {
-	position     io.Writer
-	level        Level
-	stdLevel     Level
-	formatter    Formatter
-	enableCaller bool
 }
 
 func initOptions(opts ...Option) *options {
@@ -426,7 +424,6 @@ func (l *Level) UnmarshalText(text []byte) error {
 	return nil
 }
 
-/*
 func main() {
 	Info("std log")
 	SetOptions(WithLevel(DebugLevel))
@@ -447,4 +444,3 @@ func main() {
 	)
 	l.Info("custom log with json formatter")
 }
-*/

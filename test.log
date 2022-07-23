@@ -1,1 +1,1 @@
-{"time":"2022-05-30T22:39:38+08:00","file":"/Volumes/2Tmac/github/mine/logie/logie.go:447","func":"main.main","message":"custom log with json formatter","level":"Info"}
+{"level":"Info","time":"2022-07-23T23:15:10+08:00","file":"/logie/logie.go:445","func":"main.main","message":"custom log with json formatter"}
